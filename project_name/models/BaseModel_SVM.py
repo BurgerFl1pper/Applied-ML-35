@@ -27,7 +27,6 @@ def splitData(finished_data: pd.DataFrame):
     :param finished_data: pandas dataframe of the data with column names "text"
     and "genre"
     :return:
-
     """
     X = finished_data['text'].tolist()
     y = finished_data['Genre'].tolist()
@@ -39,6 +38,14 @@ def splitData(finished_data: pd.DataFrame):
 
 
 def encodingData(X_train, X_test, y_train, y_test):
+    """
+    Encodes the data into a format that can be used by the model.
+    :param X_train: training data
+    :param X_test: testing data
+    :param y_train: training labels
+    :param y_test: testing labels
+    :return: encoded data
+    """
     vectorizer = TfidfVectorizer(stop_words="english", max_features=5000)
     X_train_vec = vectorizer.fit_transform(X_train)
     X_test_vec = vectorizer.transform(X_test)
@@ -51,6 +58,13 @@ def encodingData(X_train, X_test, y_train, y_test):
 
 
 def predict(X_train_vec, X_test_vec, y_train_binary):
+    """ 
+    Trains the model and predicts the labels for the test data.
+    :param X_train_vec: training data
+    :param X_test_vec: testing data
+    :param y_train_binary: training labels
+    :return: predicted labels
+    """
     classifier = OneVsRestClassifier(LinearSVC())
     classifier.fit(X_train_vec, y_train_binary)
     y_pred = classifier.predict(X_test_vec)
