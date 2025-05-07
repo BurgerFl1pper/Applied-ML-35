@@ -7,6 +7,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import pandas as pd
 import os
 
+
 def loadData():
     """
     Finds the current file's directory, finds the data file directory relative
