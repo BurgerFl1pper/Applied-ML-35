@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import joblib
 import os
@@ -17,16 +17,19 @@ CLASSIFIER = joblib.load(os.path.join(MODEL_DIR, 'classifier.joblib'))
 class LyricsInput(BaseModel):
     lyrics: str
 
+class GenrePrediction(BaseModel):
+    predicted_genres: list[str]
+
 
 @app.post("/predict")
 def predict_genres(input: LyricsInput):
-    try:
-        lyrics_vectorized = VECTORIZER.transform([input.lyrics])
+    if not input.lyrics or input.lyrics.strip() == "":
+        raise HTTPException(status_code=400, detail="Lyrics input cannot be empty.")
 
-        y_pred_binary = CLASSIFIER.predict(lyrics_vectorized)
+    lyrics_vectorized = VECTORIZER.transform([input.lyrics])
 
-        predicted_labels = MLB.inverse_transform(y_pred_binary)
+    y_pred_binary = CLASSIFIER.predict(lyrics_vectorized)
 
-        return{"predicted_genres": predicted_labels[0]}
-    except Exception as e:
-        return {"error": str(e)}
+    predicted_labels = MLB.inverse_transform(y_pred_binary)
+
+    return{"predicted_genres": predicted_labels[0]}
