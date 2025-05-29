@@ -9,9 +9,9 @@ class RandomModel:
 
     @staticmethod
     def makePredictions(data, mlb):
-        guesses = mlb.transform(['alternative rock',
+        guesses = mlb.transform([['alternative rock',
                                  'indie rock',
-                                 'pop rock'])[0]
+                                 'pop rock']])[0]
         return [guesses] * len(data)
 
     def test(self, y_test_binary):

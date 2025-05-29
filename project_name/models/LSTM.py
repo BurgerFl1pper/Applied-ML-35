@@ -100,7 +100,7 @@ def predict(X_train_pad, X_test_pad, y_train_binary, y_test_binary, mlb):
         Recall(name="recall")])
 
     model.fit(X_train_pad, y_train_binary, 
-              epochs=1,
+              epochs=10,
               batch_size=64, 
               validation_split=0.2)
 
@@ -118,12 +118,13 @@ def main():
     
     X_train_pad, X_test_pad, y_train_binary, y_test_binary, tokenizer, mlb = tokenizingData(X_train, X_test, y_train, y_test)
     
-    #y_pred = predict(X_train_pad, X_test_pad, y_train_binary, y_test_binary, mlb)
+    y_pred = predict(X_train_pad, X_test_pad, y_train_binary, y_test_binary, mlb)
 
     print("RandomGuesses:")
     guesses = RandomModel(y_test_binary, mlb)
 
-    #print(classification_report(y_test_binary, y_pred, target_names=mlb.classes_))
+    print("Out Model:")
+    print(classification_report(y_test_binary, y_pred, target_names=mlb.classes_))
 
 
 main()
