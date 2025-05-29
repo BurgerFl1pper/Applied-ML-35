@@ -4,8 +4,10 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.pipeline import Pipeline
 import pandas as pd
 import os
+import joblib
 
 
 def loadData():
@@ -54,10 +56,14 @@ def encodingData(X_train, X_test, y_train, y_test):
     y_train_binary = mlb.fit_transform(y_train)
     y_test_binary = mlb.transform(y_test)
 
-    return X_train_vec, X_test_vec, y_train_binary, y_test_binary, mlb
+    return X_train_vec, X_test_vec, y_train_binary, y_test_binary, vectorizer, mlb
 
+def trainClassifier(X_train_vec, y_train_binary):
+    clf = OneVsRestClassifier(LinearSVC())
+    clf.fit(X_train_vec, y_train_binary)
+    return clf
 
-def predict(X_train_vec, X_test_vec, y_train_binary):
+def evaluate(clf, X_test_vec, y_test_binary, mlb):
     """ 
     Trains the model and predicts the labels for the test data.
     :param X_train_vec: training data
@@ -65,21 +71,24 @@ def predict(X_train_vec, X_test_vec, y_train_binary):
     :param y_train_binary: training labels
     :return: predicted labels
     """
-    classifier = OneVsRestClassifier(LinearSVC())
-    classifier.fit(X_train_vec, y_train_binary)
-    y_pred = classifier.predict(X_test_vec)
-    return y_pred
+    y_pred = clf.predict(X_test_vec)
+    print(classification_report(y_test_binary, y_pred, target_names=mlb.classes_))
 
+def saveAll(vectorizer, mlb, clf, model_dir='API'):
+    os.makedirs(model_dir, exist_ok=True)
+    joblib.dump(vectorizer, os.path.join(model_dir, 'vectorizer.joblib'))
+    joblib.dump(mlb, os.path.join(model_dir, 'mlb.joblib'))
+    joblib.dump(clf, os.path.join(model_dir, 'classifier.joblib'))
 
 def main():
     finished_data = loadData()
     X_train, X_test, y_train, y_test = splitData(finished_data)
-    X_train_vec, X_test_vec, y_train_binary, y_test_binary, mlb = encodingData(X_train,
+    X_train_vec, X_test_vec, y_train_binary, y_test_binary, vectorizer, mlb = encodingData(X_train,
                                                                           X_test,
                                                                           y_train,
                                                                           y_test)
-    y_pred = predict(X_train_vec, X_test_vec, y_train_binary)
-    print(classification_report(y_test_binary, y_pred, target_names=mlb.classes_))
-
-
+    clf = trainClassifier(X_train_vec, y_train_binary)
+    evaluate(clf, X_test_vec, y_test_binary, mlb)
+    saveAll(vectorizer, mlb, clf)
+    
 main()
