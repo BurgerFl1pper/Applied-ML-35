@@ -12,6 +12,7 @@ import os
 class LyricsInput(BaseModel):
     text: str
 
+
 async def lifespan(app: FastAPI):
     classifier, vectorizer, mlb = trainModel()
     app.state.classifier = classifier
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
 
 def loadData():
     """
@@ -33,6 +35,7 @@ def loadData():
     file_path = os.path.abspath(file_path)
 
     return pd.read_json(file_path, lines=True)
+
 
 def trainModel():
 
@@ -50,6 +53,7 @@ def trainModel():
     classifier.fit(X_vec, y_binary)
 
     return classifier, vectorizer, mlb
+
 
 @app.post("/predict")
 def predict_genres(request: Request, lyrics: LyricsInput):

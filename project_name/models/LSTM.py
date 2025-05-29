@@ -10,10 +10,12 @@ from tensorflow.keras.utils import pad_sequences
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Embedding, LSTM, Dense
 from tensorflow.keras.metrics import AUC, Precision, Recall
+from Random import RandomModel
 
 max_words = 10000
 max_len = 200
 embedding_dim = 100
+
 
 def loadData():
     """
@@ -26,6 +28,7 @@ def loadData():
     file_path = os.path.abspath(file_path)
 
     return pd.read_json(file_path, lines=True)
+
 
 def splitData(finished_data: pd.DataFrame):
     """
@@ -42,6 +45,7 @@ def splitData(finished_data: pd.DataFrame):
                                                         random_state=40)
     return X_train, X_test, y_train, y_test
 
+
 def cleanText(text):
     text = re.sub(r"\[.*?\]", "", text)
     text = text.lower()
@@ -49,9 +53,11 @@ def cleanText(text):
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
+
 def cleanData(data):
     return [cleanText(song) for song in data]
-        
+
+
 def tokenizingData(X_train, X_test, y_train, y_test):
     """
     Tokenizes the data into a format that can be used by the model.
@@ -76,6 +82,7 @@ def tokenizingData(X_train, X_test, y_train, y_test):
 
     return X_train_pad, X_test_pad, y_train_binary, y_test_binary, tokenizer, mlb
 
+
 def lstm_model(num_labels):
     inputs = Input(shape=(max_len,))
     x = Embedding(input_dim=max_words, output_dim=embedding_dim, input_length=max_len)(inputs)
@@ -93,7 +100,7 @@ def predict(X_train_pad, X_test_pad, y_train_binary, y_test_binary, mlb):
         Recall(name="recall")])
 
     model.fit(X_train_pad, y_train_binary, 
-              epochs=10, 
+              epochs=1,
               batch_size=64, 
               validation_split=0.2)
 
@@ -111,9 +118,12 @@ def main():
     
     X_train_pad, X_test_pad, y_train_binary, y_test_binary, tokenizer, mlb = tokenizingData(X_train, X_test, y_train, y_test)
     
-    y_pred = predict(X_train_pad, X_test_pad, y_train_binary, y_test_binary, mlb)
-    
-    print(classification_report(y_test_binary, y_pred, target_names=mlb.classes_))
+    #y_pred = predict(X_train_pad, X_test_pad, y_train_binary, y_test_binary, mlb)
+
+    print("RandomGuesses:")
+    guesses = RandomModel(y_test_binary, mlb)
+
+    #print(classification_report(y_test_binary, y_pred, target_names=mlb.classes_))
 
 
 main()
