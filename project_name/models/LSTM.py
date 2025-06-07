@@ -127,7 +127,7 @@ def computeOptimalThresholds(y_val_binary: np.ndarray, y_pred_prob_val: np.ndarr
 
 def predict(X_train_pad, X_val_pad, X_test_pad, 
             y_train_binary, y_val_binary, y_test_binary, mlb):
-    callback = keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', patience=3)
+    callback = tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', patience=3)
     model = lstmModel(num_labels=len(mlb.classes_))
     model.compile(loss='binary_crossentropy', optimizer='adam',  metrics=[
         Precision(name="precision"),
