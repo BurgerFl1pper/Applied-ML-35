@@ -130,7 +130,7 @@ def predict(X_train_pad, X_val_pad, X_test_pad,
             y_train_binary, y_val_binary, y_test_binary, mlb):
     callback = keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', patience=3)
     model = lstmModel(num_labels=len(mlb.classes_))
-    loss_fn = BinaryFocalCrossentropy(alpha=0.25, gamma=2.0, reduction=None)
+    loss_fn = BinaryFocalCrossentropy(alpha=0.5, gamma=2.0, reduction=None)
     model.compile(loss=loss_fn, optimizer='adam',  metrics=[
         Precision(name="precision"),
         Recall(name="recall")])
