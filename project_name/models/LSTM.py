@@ -1,5 +1,7 @@
 import os
 import re
+
+import keras.callbacks
 import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
@@ -54,7 +56,7 @@ def splitData(finished_data: pd.DataFrame):
 def cleanText(text):
     text = re.sub(r"\[.*?\]", "", text)
     text = text.lower()
-    text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
+    text = re.sub(r"[^a-z0-9\s]", "", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
@@ -125,15 +127,20 @@ def compute_optimal_thresholds(y_val_binary: np.ndarray, y_pred_prob_val: np.nda
 
 def predict(X_train_pad, X_val_pad, X_test_pad, 
             y_train_binary, y_val_binary, y_test_binary, mlb):
+    callback = keras.callbacks.EarlyStopping(monitor='val_loss', mode='max', patience=3)
+
     model = lstm_model(num_labels=len(mlb.classes_))
     model.compile(loss='binary_crossentropy', optimizer='adam',  metrics=[
         Precision(name="precision"),
         Recall(name="recall")])
 
-    model.fit(X_train_pad, y_train_binary, 
-              epochs=10,
-              batch_size=64, 
-              validation_data=(X_val_pad, y_val_binary))
+    history = model.fit(X_train_pad, y_train_binary,
+                        batch_size=64,
+                        validation_data=(X_val_pad, y_val_binary),
+                        callbacks=[callback])
+    print(history.history["loss"])
+    print(history.history['val_loss'])
+    print(len(history.history["val_loss"]))
 
     # we first predict on the validation set and compute for the optimal threshold
     y_pred_prob_val = model.predict(X_val_pad)
@@ -182,14 +189,14 @@ def main():
     y_pred_prob, y_pred, thresholds = predict(
         X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, mlb)
     
-    print("Optimal thresholds per class:")
-    for genre, threshold in zip(mlb.classes_, thresholds):
-        print(f"{genre}: {threshold:.2f}")
+    #print("Optimal thresholds per class:")
+    #for genre, threshold in zip(mlb.classes_, thresholds):
+        #print(f"{genre}: {threshold:.2f}")
         
-    print("Random Guesses:")
-    guesses = RandomModel(y_test_binary, mlb)
+    #print("Random Guesses:")
+    #guesses = RandomModel(y_test_binary, mlb)
 
-    print("Out Model:")
+    print("Our Model:")
     print(classification_report(y_test_binary, y_pred, target_names=mlb.classes_))
 
     plot_precision_recall(y_test_binary, y_pred_prob, mlb.classes_)
