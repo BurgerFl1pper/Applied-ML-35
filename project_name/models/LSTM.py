@@ -4,13 +4,15 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, precision_recall_curve, average_precision_score, f1_score
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.utils import pad_sequences
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Embedding, LSTM, Dense
-from tensorflow.keras.metrics import AUC, Precision, Recall
+from tensorflow.keras.layers import Input, Embedding, LSTM, Dense, Dropout
+from tensorflow.keras.metrics import Precision, Recall
 from Random import RandomModel
+import matplotlib.pyplot as plt
+import numpy as np
 
 max_words = 10000
 max_len = 200
@@ -40,10 +42,13 @@ def splitData(finished_data: pd.DataFrame):
     X = finished_data['text'].tolist()
     y = finished_data['Genre'].tolist()
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.2,
-                                                        random_state=40)
-    return X_train, X_test, y_train, y_test
+    # X_train, X_test, y_train, y_test = train_test_split(X, y,
+    #                                                     test_size=0.2,
+    #                                                     random_state=40)
+    X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, random_state=40)
+    X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, random_state=40)
+
+    return X_train, X_val, X_test, y_train, y_val, y_test
 
 
 def cleanText(text):
@@ -58,7 +63,7 @@ def cleanData(data):
     return [cleanText(song) for song in data]
 
 
-def tokenizingData(X_train, X_test, y_train, y_test):
+def tokenizingData(X_train, X_val, X_test, y_train, y_val, y_test):
     """
     Tokenizes the data into a format that can be used by the model.
     :param X_train: training data
@@ -71,16 +76,19 @@ def tokenizingData(X_train, X_test, y_train, y_test):
     tokenizer.fit_on_texts(X_train)
 
     X_train_seq = tokenizer.texts_to_sequences(X_train)
+    X_val_seq = tokenizer.texts_to_sequences(X_val)
     X_test_seq = tokenizer.texts_to_sequences(X_test)
-
+    
     X_train_pad = pad_sequences(X_train_seq, maxlen=max_len, padding='post', truncating='post')
+    X_val_pad = pad_sequences(X_val_seq, maxlen=max_len, padding='post', truncating='post')
     X_test_pad = pad_sequences(X_test_seq, maxlen=max_len, padding='post', truncating='post')
 
     mlb = MultiLabelBinarizer()
     y_train_binary = mlb.fit_transform(y_train)
+    y_val_binary = mlb.transform(y_val)
     y_test_binary = mlb.transform(y_test)
 
-    return X_train_pad, X_test_pad, y_train_binary, y_test_binary, tokenizer, mlb
+    return X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, tokenizer, mlb
 
 
 def lstm_model(num_labels):
@@ -88,12 +96,35 @@ def lstm_model(num_labels):
     x = Embedding(input_dim=max_words, output_dim=embedding_dim, input_length=max_len)(inputs)
     x = LSTM(128, return_sequences=False)(x)
     x = Dense(64, activation='relu')(x)
+    x = Dropout(0.1)(x)
     outputs = Dense(num_labels, activation='sigmoid')(x)
     model = Model(inputs=inputs, outputs=outputs)
     return model
 
+def compute_class_threshold(y_true: np.ndarray, y_pred_prob: np.ndarray) -> float:
+    best_threshold = 0.5
+    best_f1 = 0.0
+    for threshold in np.linspace(0.0, 1.0, 101):
+        y_pred = (y_pred_prob >= threshold).astype(int)
+        f1 = f1_score(y_true, y_pred, zero_division=0)
+        if f1 > best_f1:
+            best_f1 = f1
+            best_threshold = threshold
+    return best_threshold
 
-def predict(X_train_pad, X_test_pad, y_train_binary, y_test_binary, mlb):
+
+def compute_optimal_thresholds(y_val_binary: np.ndarray, y_pred_prob_val: np.ndarray) -> np.ndarray:
+    thresholds = []
+    #for every class(genre) we get the true labels and predicted probabilities
+    for i in range(y_val_binary.shape[1]):
+        # y_val_binary[:, i] -> true labels for genre i (that specific genre) aka y_true
+        # y_pred_prob_val[:, i]  -> model's predicted probabilities for genre i
+        threshold = compute_class_threshold(y_val_binary[:, i], y_pred_prob_val[:, i])
+        thresholds.append(threshold) #best threshold returned from compute_class_threshold
+    return np.array(thresholds)
+
+def predict(X_train_pad, X_val_pad, X_test_pad, 
+            y_train_binary, y_val_binary, y_test_binary, mlb):
     model = lstm_model(num_labels=len(mlb.classes_))
     model.compile(loss='binary_crossentropy', optimizer='adam',  metrics=[
         Precision(name="precision"),
@@ -102,29 +133,67 @@ def predict(X_train_pad, X_test_pad, y_train_binary, y_test_binary, mlb):
     model.fit(X_train_pad, y_train_binary, 
               epochs=10,
               batch_size=64, 
-              validation_split=0.2)
+              validation_data=(X_val_pad, y_val_binary))
 
-    y_pred_prob = model.predict(X_test_pad)
-    y_pred = (y_pred_prob > 0.5).astype(int)
-    return y_pred
+    # we first predict on the validation set and compute for the optimal threshold
+    y_pred_prob_val = model.predict(X_val_pad)
+    thresholds = compute_optimal_thresholds(y_val_binary, y_pred_prob_val)
     
-   
+    # then we predict on the test set
+    y_pred_prob_test = model.predict(X_test_pad)
+    
+    # for each class we adjust the threshold
+    y_pred_test = np.zeros_like(y_pred_prob_test)
+    for i, t in enumerate(thresholds):
+        y_pred_test[:, i] = (y_pred_prob_test[:, i] >= t).astype(int)
+    
+    return y_pred_prob_test, y_pred_test, thresholds
+
+def plot_precision_recall(y_test_binary, y_pred_prob, genres):
+    plt.figure(figsize=(10, 8))
+    n_classes = len(genres)
+    colors = plt.cm.get_cmap('tab10', n_classes)
+
+    for i in range(n_classes):
+        precision, recall, _ = precision_recall_curve(y_test_binary[:, i], y_pred_prob[:, i])
+        average_precision = average_precision_score(y_test_binary[:, i], y_pred_prob[:, i])
+        plt.plot(recall, precision, lw=2, color=colors(i),
+                 label=f"{genres[i]} (Average Precision={average_precision:.2f})")
+
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve per Genre')
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+    plt.grid()
+    plt.show()
+    
 def main():
     finished_data = loadData()
-    X_train, X_test, y_train, y_test = splitData(finished_data)
+    X_train, X_val, X_test, y_train, y_val, y_test = splitData(finished_data)
     
     X_train = cleanData(X_train)
+    X_val = cleanData(X_val)
     X_test = cleanData(X_test)
     
-    X_train_pad, X_test_pad, y_train_binary, y_test_binary, tokenizer, mlb = tokenizingData(X_train, X_test, y_train, y_test)
+    X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, tokenizer, mlb = tokenizingData(
+        X_train, X_val, X_test, y_train,y_val, y_test)
     
-    y_pred = predict(X_train_pad, X_test_pad, y_train_binary, y_test_binary, mlb)
-
-    print("RandomGuesses:")
+    y_pred_prob, y_pred, thresholds = predict(
+        X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, mlb)
+    
+    print("Optimal thresholds per class:")
+    for genre, threshold in zip(mlb.classes_, thresholds):
+        print(f"{genre}: {threshold:.2f}")
+        
+    print("Random Guesses:")
     guesses = RandomModel(y_test_binary, mlb)
 
     print("Out Model:")
     print(classification_report(y_test_binary, y_pred, target_names=mlb.classes_))
 
+    plot_precision_recall(y_test_binary, y_pred_prob, mlb.classes_)
 
-main()
+
+if __name__ == "__main__":
+    main()
