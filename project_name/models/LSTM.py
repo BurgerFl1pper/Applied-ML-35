@@ -139,9 +139,7 @@ def predict(X_train_pad, X_val_pad, X_test_pad,
                         batch_size=64,
                         validation_data=(X_val_pad, y_val_binary),
                         callbacks=[callback])
-    print(history.history["loss"])
-    print(history.history['val_loss'])
-    print(len(history.history["val_loss"]))
+    print("Epochs trained: ", len(history.history["val_loss"]))
 
     # we first predict on the validation set and compute for the optimal threshold
     y_pred_prob_val = model.predict(X_val_pad)
