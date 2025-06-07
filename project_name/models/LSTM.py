@@ -127,7 +127,7 @@ def compute_optimal_thresholds(y_val_binary: np.ndarray, y_pred_prob_val: np.nda
 
 def predict(X_train_pad, X_val_pad, X_test_pad, 
             y_train_binary, y_val_binary, y_test_binary, mlb):
-    callback = keras.callbacks.EarlyStopping(monitor='val_loss', mode='max', patience=3)
+    callback = keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', patience=3)
 
     model = lstm_model(num_labels=len(mlb.classes_))
     model.compile(loss='binary_crossentropy', optimizer='adam',  metrics=[
@@ -135,6 +135,7 @@ def predict(X_train_pad, X_val_pad, X_test_pad,
         Recall(name="recall")])
 
     history = model.fit(X_train_pad, y_train_binary,
+                        epochs = 20,
                         batch_size=64,
                         validation_data=(X_val_pad, y_val_binary),
                         callbacks=[callback])
