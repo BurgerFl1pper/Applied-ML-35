@@ -91,7 +91,7 @@ def tokenizingData(X_train, X_val, X_test, y_train, y_val, y_test):
     return X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, tokenizer, mlb
 
 
-def lstm_model(num_labels):
+def lstmModel(num_labels):
     inputs = Input(shape=(max_len,))
     x = Embedding(input_dim=max_words, output_dim=embedding_dim, input_length=max_len)(inputs)
     x = LSTM(128, return_sequences=False)(x)
@@ -101,7 +101,7 @@ def lstm_model(num_labels):
     model = Model(inputs=inputs, outputs=outputs)
     return model
 
-def compute_class_threshold(y_true: np.ndarray, y_pred_prob: np.ndarray) -> float:
+def computeClassThreshold(y_true: np.ndarray, y_pred_prob: np.ndarray) -> float:
     best_threshold = 0.5
     best_f1 = 0.0
     for threshold in np.linspace(0.0, 1.0, 101):
@@ -113,31 +113,31 @@ def compute_class_threshold(y_true: np.ndarray, y_pred_prob: np.ndarray) -> floa
     return best_threshold
 
 
-def compute_optimal_thresholds(y_val_binary: np.ndarray, y_pred_prob_val: np.ndarray) -> np.ndarray:
+def computeOptimalThresholds(y_val_binary: np.ndarray, y_pred_prob_val: np.ndarray) -> np.ndarray:
     thresholds = []
     #for every class(genre) we get the true labels and predicted probabilities
     for i in range(y_val_binary.shape[1]):
         # y_val_binary[:, i] -> true labels for genre i (that specific genre) aka y_true
         # y_pred_prob_val[:, i]  -> model's predicted probabilities for genre i
-        threshold = compute_class_threshold(y_val_binary[:, i], y_pred_prob_val[:, i])
-        thresholds.append(threshold) #best threshold returned from compute_class_threshold
+        threshold = computeClassThreshold(y_val_binary[:, i], y_pred_prob_val[:, i])
+        thresholds.append(threshold) #best threshold returned from computeClassThreshold
     return np.array(thresholds)
 
 def predict(X_train_pad, X_val_pad, X_test_pad, 
             y_train_binary, y_val_binary, y_test_binary, mlb):
-    model = lstm_model(num_labels=len(mlb.classes_))
+    model = lstmModel(num_labels=len(mlb.classes_))
     model.compile(loss='binary_crossentropy', optimizer='adam',  metrics=[
         Precision(name="precision"),
         Recall(name="recall")])
 
     model.fit(X_train_pad, y_train_binary, 
-              epochs=10,
+              epochs=2,
               batch_size=64, 
               validation_data=(X_val_pad, y_val_binary))
 
     # we first predict on the validation set and compute for the optimal threshold
     y_pred_prob_val = model.predict(X_val_pad)
-    thresholds = compute_optimal_thresholds(y_val_binary, y_pred_prob_val)
+    thresholds = computeOptimalThresholds(y_val_binary, y_pred_prob_val)
     
     # then we predict on the test set
     y_pred_prob_test = model.predict(X_test_pad)
@@ -149,7 +149,12 @@ def predict(X_train_pad, X_val_pad, X_test_pad,
     
     return y_pred_prob_test, y_pred_test, thresholds
 
-def plot_precision_recall(y_test_binary, y_pred_prob, genres):
+def zeroRuleBaseline(y_true: np.ndarray, class_names: list):
+    y_pred = np.ones(y_true.shape)
+    print("Zero Rule Baseline Predictions:")
+    print(classification_report(y_true, y_pred,target_names=class_names))
+
+def plotPrecisionRecall(y_test_binary, y_pred_prob, genres):
     plt.figure(figsize=(10, 8))
     n_classes = len(genres)
     colors = plt.cm.get_cmap('tab10', n_classes)
@@ -185,6 +190,8 @@ def main():
     print("Optimal thresholds per class:")
     for genre, threshold in zip(mlb.classes_, thresholds):
         print(f"{genre}: {threshold:.2f}")
+
+    zeroRuleBaseline(y_test_binary, mlb.classes_)
         
     print("Random Guesses:")
     guesses = RandomModel(y_test_binary, mlb)
@@ -192,7 +199,7 @@ def main():
     print("Out Model:")
     print(classification_report(y_test_binary, y_pred, target_names=mlb.classes_))
 
-    plot_precision_recall(y_test_binary, y_pred_prob, mlb.classes_)
+    plotPrecisionRecall(y_test_binary, y_pred_prob, mlb.classes_)
 
 
 if __name__ == "__main__":
