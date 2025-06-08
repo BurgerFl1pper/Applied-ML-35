@@ -118,7 +118,7 @@ class HyperTuning:
         return model
 
     @staticmethod
-    def make_binary(y_pred_prob):
+    def make_binary(y_pred_prob, mlb):
         """
         Returns binary values for output based on their probabilities meeting
         a threshhold
@@ -126,7 +126,7 @@ class HyperTuning:
         :return: list of output prediction binaries
         """
         y_pred_test = np.zeros_like(y_pred_prob)
-        for i, t in enumerate(y_pred_prob):
+        for i in range(len(mlb.classes_)):
             y_pred_test[:, i] = (y_pred_prob[:, i] >= 0.1).astype(int)
         return y_pred_test
 
@@ -142,11 +142,13 @@ class HyperTuning:
         """
         y_pred_prob_val = model.predict(X_val_pad)
 
-        y_pred = self.make_binary(y_pred_prob_val)
+        y_pred = self.make_binary(y_pred_prob_val, mlb)
 
         report = classification_report(y_val_binary, y_pred, target_names=mlb.classes_)
-
-        score = report["macro avg"]["f1-score"]
+        print(type(report))
+        macro = report["macro avg"]
+        print(type(macro))
+        score = macro["f1-score"]
         if float(score) > self.best_score:
             self.best_score = score
             self.best_parameters = self.parameters
