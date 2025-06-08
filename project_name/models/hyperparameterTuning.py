@@ -144,11 +144,8 @@ class HyperTuning:
 
         y_pred = self.make_binary(y_pred_prob_val, mlb)
 
-        report = classification_report(y_val_binary, y_pred, target_names=mlb.classes_)
-        print(type(report))
-        macro = report["macro avg"]
-        print(type(macro))
-        score = macro["f1-score"]
+        report = classification_report(y_val_binary, y_pred, target_names=mlb.classes_, output_dict=True)
+        score = report["macro avg"]["f1-score"]
         if float(score) > self.best_score:
             self.best_score = score
             self.best_parameters = self.parameters
