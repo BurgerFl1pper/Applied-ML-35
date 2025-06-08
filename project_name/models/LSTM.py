@@ -16,6 +16,8 @@ from Random import RandomModel
 import matplotlib.pyplot as plt
 import numpy as np
 
+from hyperparameterTuning import HyperTuning
+
 max_words = 10000
 max_len = 200
 embedding_dim = 100
@@ -127,7 +129,9 @@ def computeOptimalThresholds(y_val_binary: np.ndarray, y_pred_prob_val: np.ndarr
 
 def predict(X_train_pad, X_val_pad, X_test_pad, 
             y_train_binary, y_val_binary, y_test_binary, mlb):
-    callback = tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', patience=3)
+    callback = tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                        mode='min',
+                                                        patience=1)
     model = lstmModel(num_labels=len(mlb.classes_))
     model.compile(loss='binary_crossentropy', optimizer='adam',  metrics=[
         Precision(name="precision"),
@@ -187,8 +191,20 @@ def main():
     X_test = cleanData(X_test)
     
     X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, tokenizer, mlb = tokenizingData(
-        X_train, X_val, X_test, y_train,y_val, y_test)
-    
+        X_train, X_val, X_test, y_train, y_val, y_test)
+
+    tuner = HyperTuning(200,
+                        max_len,
+                        max_words,
+                        embedding_dim, mlb)
+
+    hyperparameters = tuner.tuneParameters(X_train_pad,
+                                           X_val_pad,
+                                           y_train_binary,
+                                           y_val_binary,
+                                           mlb)
+    print(hyperparameters)
+
     y_pred_prob, y_pred, thresholds = predict(
         X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, mlb)
     
