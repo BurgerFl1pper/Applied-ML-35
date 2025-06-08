@@ -110,10 +110,10 @@ class HyperTuning:
             Recall(name="recall")])
 
         model.fit(X_train_pad, y_train_binary,
-                            epochs=20,
-                            batch_size=self.parameters[5],
-                            validation_data=(X_val_pad, y_val_binary),
-                            callbacks=[callback])
+                  epochs=20,
+                  batch_size=self.parameters[5],
+                  validation_data=(X_val_pad, y_val_binary),
+                  callbacks=[callback])
 
         return model
 
