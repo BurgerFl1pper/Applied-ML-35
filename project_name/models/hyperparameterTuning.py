@@ -49,8 +49,6 @@ class HyperTuning:
         inputs = Input(shape=(self.max_len,))
         x = Embedding(input_dim=self.max_words, output_dim=self.embedding_dim,
                       input_length=self.max_len)(inputs)
-        x = LSTM(lstmNeurons, return_sequences=True)(x)
-        x = LSTM(lstmNeurons, return_sequences=True)(x)
         x = LSTM(lstmNeurons, return_sequences=False)(x)
         x = Dense(denseNeurons, activation='relu')(x)
         x = Dropout(dropout)(x)
