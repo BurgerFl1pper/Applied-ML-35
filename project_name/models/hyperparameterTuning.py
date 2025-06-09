@@ -21,7 +21,7 @@ class HyperTuning:
         self.max_words = max_words
         self.embedding_dim = embedding_dim
         self.num_labels = len(mlb.classes_)
-        self.layers = [1, 2, 3]
+        self.neurons = [32, 64, 128, 256]
         self.density = [32, 64, 128]
         self.dropout = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
         self.alpha = [0.25, 0.5, 0.75]

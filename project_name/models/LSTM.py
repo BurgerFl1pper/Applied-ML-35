@@ -95,12 +95,12 @@ def tokenizingData(X_train, X_val, X_test, y_train, y_val, y_test):
     return X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, tokenizer, mlb
 
 
-def lstmModel(num_labels):
+def lstmModel(num_labels, lstmNeurons=128, denseNeurons=64, dropout=0.1):
     inputs = Input(shape=(max_len,))
     x = Embedding(input_dim=max_words, output_dim=embedding_dim, input_length=max_len)(inputs)
-    x = LSTM(128, return_sequences=False)(x)
-    x = Dense(64, activation='relu')(x)
-    x = Dropout(0.1)(x)
+    x = LSTM(lstmNeurons, return_sequences=False)(x)
+    x = Dense(denseNeurons, activation='relu')(x)
+    x = Dropout(dropout)(x)
     outputs = Dense(num_labels, activation='sigmoid')(x)
     model = Model(inputs=inputs, outputs=outputs)
     return model
@@ -127,12 +127,16 @@ def computeOptimalThresholds(y_val_binary: np.ndarray, y_pred_prob_val: np.ndarr
         thresholds.append(threshold) #best threshold returned from computeClassThreshold
     return np.array(thresholds)
 
+
 def predict(X_train_pad, X_val_pad, X_test_pad, 
-            y_train_binary, y_val_binary, y_test_binary, mlb):
+            y_train_binary, y_val_binary, y_test_binary, mlb, hyperparameters):
     callback = tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss',
                                                         mode='min',
                                                         patience=1)
-    model = lstmModel(num_labels=len(mlb.classes_))
+    model = lstmModel(num_labels=len(mlb.classes_),
+                      lstmNeurons=hyperparameters[0],
+                      denseNeurons=hyperparameters[1],
+                      dropout=hyperparameters[2])
     model.compile(loss='binary_crossentropy', optimizer='adam',  metrics=[
         Precision(name="precision"),
         Recall(name="recall")])
@@ -206,7 +210,7 @@ def main():
     print(hyperparameters)
 
     y_pred_prob, y_pred, thresholds = predict(
-        X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, mlb)
+        X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, mlb, hyperparameters)
     
     print("Optimal thresholds per class:")
     for genre, threshold in zip(mlb.classes_, thresholds):
