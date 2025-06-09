@@ -98,7 +98,7 @@ def tokenizingData(X_train, X_val, X_test, y_train, y_val, y_test):
     return X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, tokenizer, mlb
 
 
-def lstmModel(num_labels, lstmNeurons=128, denseNeurons=64, dropout=0.1, learning_rate=1e-4):
+def lstmModel(num_labels, lstmNeurons=128, denseNeurons=64, dropout=0.1, learning_rate=1e-4, alpha=0.25, gamma=0.5):
     inputs = Input(shape=(max_len,))
     x = Embedding(input_dim=max_words, output_dim=embedding_dim, input_length=max_len)(inputs)
     x = LSTM(lstmNeurons, return_sequences=False)(x)
@@ -107,9 +107,11 @@ def lstmModel(num_labels, lstmNeurons=128, denseNeurons=64, dropout=0.1, learnin
     outputs = Dense(num_labels, activation='sigmoid')(x)
     model = Model(inputs=inputs, outputs=outputs)
 
+    loss = MyBinaryFocalCrossentropy(alpha=alpha, gamma=gamma)
+
     optimizer = Adam(learning_rate=learning_rate)
     model.compile(optimizer=optimizer,
-                  loss='binary_crossentropy',
+                  loss=loss,
                   metrics=['accuracy'])
     return model
 

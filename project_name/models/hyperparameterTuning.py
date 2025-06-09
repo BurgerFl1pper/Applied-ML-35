@@ -36,7 +36,9 @@ class HyperTuning:
               lstmNeurons: int,
               denseNeurons: int,
               dropout: float,
-              learning_rate: float):
+              learning_rate: float,
+              alpha,
+              gamma):
         """
         Builds a model with the given hyperparameters
         :param num_labels: amount of output labels
@@ -56,8 +58,9 @@ class HyperTuning:
         model = Model(inputs=inputs, outputs=outputs)
 
         optimizer = Adam(learning_rate=learning_rate)
+        loss = MyBinaryFocalCrossentropy(alpha=alpha, gamma=gamma)
         model.compile(optimizer=optimizer,
-                      loss=MyBinaryFocalCrossentropy,
+                      loss=loss,
                       metrics=['accuracy'])
         return model
 
@@ -105,7 +108,9 @@ class HyperTuning:
                            self.parameters["lstmNeurons"],
                            self.parameters["denseNeurons"],
                            self.parameters["dropout"],
-                           self.parameters["learning_rate"])
+                           self.parameters["learning_rate"],
+                           self.parameters["alpha"],
+                           self.parameters["gamma"])
 
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[
             Precision(name="precision"),
