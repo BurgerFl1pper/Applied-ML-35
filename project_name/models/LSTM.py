@@ -95,7 +95,7 @@ def tokenizingData(X_train, X_val, X_test, y_train, y_val, y_test):
     return X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, tokenizer, mlb
 
 
-def lstmModel(num_labels, lstmNeurons=128, denseNeurons=64, dropout=0.1):
+def lstmModel(num_labels, lstmNeurons=128, denseNeurons=64, dropout=0.1, learning_rate=1e-4):
     inputs = Input(shape=(max_len,))
     x = Embedding(input_dim=max_words, output_dim=embedding_dim, input_length=max_len)(inputs)
     x = LSTM(lstmNeurons, return_sequences=False)(x)
@@ -103,6 +103,11 @@ def lstmModel(num_labels, lstmNeurons=128, denseNeurons=64, dropout=0.1):
     x = Dropout(dropout)(x)
     outputs = Dense(num_labels, activation='sigmoid')(x)
     model = Model(inputs=inputs, outputs=outputs)
+
+    optimizer = Adam(learning_rate=learning_rate)
+    model.compile(optimizer=optimizer,
+                  loss='binary_crossentropy',
+                  metrics=['accuracy'])
     return model
 
 def computeClassThreshold(y_true: np.ndarray, y_pred_prob: np.ndarray) -> float:
@@ -136,7 +141,8 @@ def predict(X_train_pad, X_val_pad, X_test_pad,
     model = lstmModel(num_labels=len(mlb.classes_),
                       lstmNeurons=hyperparameters["lstmNeurons"],
                       denseNeurons=hyperparameters["denseNeurons"],
-                      dropout=hyperparameters["dropout"])
+                      dropout=hyperparameters["dropout"],
+                      learning_rate=hyperparameters["learning_rate"])
     model.compile(loss='binary_crossentropy', optimizer='adam',  metrics=[
         Precision(name="precision"),
         Recall(name="recall")])
