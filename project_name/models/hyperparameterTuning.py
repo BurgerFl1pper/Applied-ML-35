@@ -1,6 +1,7 @@
 import tensorflow as tf
 import random
 import numpy as np
+from dataclasses import dict
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Embedding, LSTM, Dense, Dropout
@@ -14,7 +15,7 @@ class HyperTuning:
 
     def __init__(self, run_amount, max_len, max_words, embedding_dim, mlb):
         self.run_amount = run_amount
-        self.parameters = []
+        self.parameters = dict()
         self.best_parameters = self.parameters.copy()
         self.best_score = float('-inf')
         self.max_len = max_len
@@ -64,21 +65,21 @@ class HyperTuning:
         Chooses random hyperparameters
         :return: list of hyperparameter values
         """
-        layers = random.choice(self.layers)
+        neurons = random.choice(self.neurons)
         density = random.choice(self.density)
         dropout = random.choice(self.dropout)
         alpha = random.choice(self.alpha)
         gamma = random.choice(self.gamma)
         batch_size = random.choice(self.batch_size)
         learning_rate = random.choice(self.learning_rate)
+        self.parameters = dict(lstmNeurons=neurons,
+                               denseNeurons=density,
+                               dropout=dropout,
+                               alpha=alpha,
+                               gamma=gamma,
+                               batch_size=batch_size,
+                               learning_rate=learning_rate)
 
-        self.parameters = [layers,
-                           density,
-                           dropout,
-                           alpha,
-                           gamma,
-                           batch_size,
-                           learning_rate]
 
     def fit(self, X_train_pad, X_val_pad,
             y_train_binary, y_val_binary):
@@ -100,10 +101,10 @@ class HyperTuning:
                                                     patience=1)
 
         model = self.build(self.num_labels,
-                           self.parameters[0],
-                           self.parameters[1],
-                           self.parameters[2],
-                           self.parameters[6])
+                           self.parameters["lstmNeurons"],
+                           self.parameters["denseNeurons"],
+                           self.parameters["dropout"],
+                           self.parameters["learning_rate"])
 
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[
             Precision(name="precision"),
@@ -111,7 +112,7 @@ class HyperTuning:
 
         model.fit(X_train_pad, y_train_binary,
                   epochs=20,
-                  batch_size=self.parameters[5],
+                  batch_size=self.parameters["batch_size"],
                   validation_data=(X_val_pad, y_val_binary),
                   callbacks=[callback])
 
@@ -148,7 +149,7 @@ class HyperTuning:
         score = report["macro avg"]["f1-score"]
         if float(score) > self.best_score:
             self.best_score = score
-            self.best_parameters = self.parameters
+            self.best_parameters = self.parameters.copy()
 
     def tuneParameters(self,
                        X_train_pad,

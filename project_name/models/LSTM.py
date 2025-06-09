@@ -134,16 +134,16 @@ def predict(X_train_pad, X_val_pad, X_test_pad,
                                                         mode='min',
                                                         patience=1)
     model = lstmModel(num_labels=len(mlb.classes_),
-                      lstmNeurons=hyperparameters[0],
-                      denseNeurons=hyperparameters[1],
-                      dropout=hyperparameters[2])
+                      lstmNeurons=hyperparameters["lstmNeurons"],
+                      denseNeurons=hyperparameters["denseNeurons"],
+                      dropout=hyperparameters["dropout"])
     model.compile(loss='binary_crossentropy', optimizer='adam',  metrics=[
         Precision(name="precision"),
         Recall(name="recall")])
 
     history = model.fit(X_train_pad, y_train_binary,
-                        epochs = 20,
-                        batch_size=64,
+                        epochs=20,
+                        batch_size=hyperparameters["batch_size"],
                         validation_data=(X_val_pad, y_val_binary),
                         callbacks=[callback])
     print("Epochs trained: ", len(history.history["val_loss"]))
