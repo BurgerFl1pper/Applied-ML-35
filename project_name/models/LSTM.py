@@ -100,6 +100,8 @@ def tokenizingData(X_train, X_val, X_test, y_train, y_val, y_test):
 def lstmModel(num_labels, lstmNeurons=128, denseNeurons=64, dropout=0.1, learning_rate=1e-4):
     inputs = Input(shape=(max_len,))
     x = Embedding(input_dim=max_words, output_dim=embedding_dim, input_length=max_len)(inputs)
+    x = LSTM(lstmNeurons, return_sequence=True)(x)
+    x = LSTM(lstmNeurons, return_sequence=True)(x)
     x = LSTM(lstmNeurons, return_sequences=False)(x)
     x = Dense(denseNeurons, activation='relu')(x)
     x = Dropout(dropout)(x)
@@ -205,7 +207,7 @@ def main():
     X_train_pad, X_val_pad, X_test_pad, y_train_binary, y_val_binary, y_test_binary, tokenizer, mlb = tokenizingData(
         X_train, X_val, X_test, y_train, y_val, y_test)
 
-    tuner = HyperTuning(200,
+    tuner = HyperTuning(50,
                         max_len,
                         max_words,
                         embedding_dim, mlb)

@@ -31,8 +31,8 @@ class HyperTuning:
 
     def build(self,
               num_labels: int,
-              layers: int,
-              density: int,
+              lstmNeurons: int,
+              denseNeurons: int,
               dropout: float,
               learning_rate: float):
         """
@@ -47,8 +47,10 @@ class HyperTuning:
         inputs = Input(shape=(self.max_len,))
         x = Embedding(input_dim=self.max_words, output_dim=self.embedding_dim,
                       input_length=self.max_len)(inputs)
-        x = LSTM(layers, return_sequences=False)(x)
-        x = Dense(density, activation='relu')(x)
+        x = LSTM(lstmNeurons, return_sequences=True)(x)
+        x = LSTM(lstmNeurons, return_sequences=True)(x)
+        x = LSTM(lstmNeurons, return_sequences=False)(x)
+        x = Dense(denseNeurons, activation='relu')(x)
         x = Dropout(dropout)(x)
         outputs = Dense(num_labels, activation='sigmoid')(x)
         model = Model(inputs=inputs, outputs=outputs)
@@ -149,6 +151,8 @@ class HyperTuning:
         if float(score) > self.best_score:
             self.best_score = score
             self.best_parameters = self.parameters.copy()
+        print("This Score: ", score, " Best Score: ", self.best_score)
+        print("Parameters used: ", self.parameters)
 
     def tuneParameters(self,
                        X_train_pad,
@@ -167,10 +171,12 @@ class HyperTuning:
         :return: List of best parameters
         """
         for i in range(self.run_amount):
+            print("Model training: ", i+1, "/", self.run_amount)
             model = self.fit(X_train_pad,
                              X_val_pad,
                              y_train_binary,
                              y_val_binary)
             self.evaluate(model, X_val_pad, y_val_binary, mlb)
+            print("Best parameters: ", self.best_parameters)
 
         return self.best_parameters
