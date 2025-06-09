@@ -13,6 +13,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Embedding, LSTM, Dense, Dropout
 from tensorflow.keras.metrics import Precision, Recall
 from Random import RandomModel
+from tensorflow.keras.optimizers import Adam
+
 import matplotlib.pyplot as plt
 import numpy as np
 
