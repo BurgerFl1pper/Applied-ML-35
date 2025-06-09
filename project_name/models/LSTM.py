@@ -14,6 +14,7 @@ from tensorflow.keras.layers import Input, Embedding, LSTM, Dense, Dropout
 from tensorflow.keras.metrics import Precision, Recall
 from Random import RandomModel
 from tensorflow.keras.optimizers import Adam
+from focal_loss import MyBinaryFocalCrossentropy
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -147,7 +148,7 @@ def predict(X_train_pad, X_val_pad, X_test_pad,
                       denseNeurons=hyperparameters["denseNeurons"],
                       dropout=hyperparameters["dropout"],
                       learning_rate=hyperparameters["learning_rate"])
-    model.compile(loss='binary_crossentropy', optimizer='adam',  metrics=[
+    model.compile(loss=MyBinaryFocalCrossentropy, optimizer='adam',  metrics=[
         Precision(name="precision"),
         Recall(name="recall")])
 

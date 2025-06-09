@@ -9,6 +9,8 @@ from tensorflow.keras.optimizers import Adam
 
 from sklearn.metrics import classification_report
 
+from focal_loss import MyBinaryFocalCrossentropy
+
 
 class HyperTuning:
 
@@ -57,7 +59,7 @@ class HyperTuning:
 
         optimizer = Adam(learning_rate=learning_rate)
         model.compile(optimizer=optimizer,
-                      loss='binary_crossentropy',
+                      loss=MyBinaryFocalCrossentropy,
                       metrics=['accuracy'])
         return model
 
