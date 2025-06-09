@@ -16,7 +16,7 @@ class HyperTuning:
         self.run_amount = run_amount
         self.parameters = []
         self.best_parameters = self.parameters.copy()
-        self.best_score = float('inf')
+        self.best_score = float('-inf')
         self.max_len = max_len
         self.max_words = max_words
         self.embedding_dim = embedding_dim
