@@ -1,7 +1,6 @@
 import tensorflow as tf
 import random
 import numpy as np
-from dataclasses import dict
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Embedding, LSTM, Dense, Dropout
