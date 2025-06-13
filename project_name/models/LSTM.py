@@ -27,9 +27,8 @@ embedding_dim = 100
 
 def loadData():
     """
-    Finds the current file's directory, finds the data file directory relative
-    to that and returns the data file
-    :return:
+    Loads the finished dataset from the JSON file.
+    :return: pandas DataFrame containing the data
     """
     script_dir = os.path.dirname(__file__)
     file_path = os.path.join(script_dir, '..', 'data', 'finished_data.json')
@@ -40,10 +39,9 @@ def loadData():
 
 def splitData(finished_data: pd.DataFrame):
     """
-    Splits the data into text and Genre, so it can be trained.
-    :param finished_data: pandas dataframe of the data with column names "text"
-    and "genre"
-    :return:
+    Splits the dataset into training, validation, and test sets.
+    :param finished_data: DataFrame with columns 'text' and 'Genre'
+    :return: Tuple containing train/val/test splits for X and y
     """
     X = finished_data['text'].tolist()
     y = finished_data['Genre'].tolist()
@@ -55,6 +53,11 @@ def splitData(finished_data: pd.DataFrame):
 
 
 def cleanText(text):
+    """
+    Cleans a single text string by removing brackets, punctuation, and making it lowercase.
+    :param text: Raw text string
+    :return: Cleaned text string
+    """
     text = re.sub(r"\[.*?\]", "", text)
     text = text.lower()
     text = re.sub(r"[^a-z0-9\s]", "", text)
@@ -63,17 +66,24 @@ def cleanText(text):
 
 
 def cleanData(data):
+    """
+    Cleans a list of text data.
+    :param data: List of raw text strings
+    :return: List of cleaned text strings
+    """
     return [cleanText(song) for song in data]
 
 
 def tokenizingData(X_train, X_val, X_test, y_train, y_val, y_test):
     """
-    Tokenizes the data into a format that can be used by the model.
-    :param X_train: training data
-    :param X_test: testing data
-    :param y_train: training labels
-    :param y_test: testing labels
-    :return: encoded data
+    Tokenizes and pads text data and binarizes genre labels.
+    :param X_train: List of training text
+    :param X_val: List of validation text
+    :param X_test: List of test text
+    :param y_train: Training genre labels
+    :param y_val: Validation genre labels
+    :param y_test: Test genre labels
+    :return: Tuple of tokenized and padded text data and binarized labels, tokenizer, and label binarizer
     """
     tokenizer = Tokenizer(num_words=max_words, oov_token="<OOV>")
     tokenizer.fit_on_texts(X_train)
@@ -95,6 +105,17 @@ def tokenizingData(X_train, X_val, X_test, y_train, y_val, y_test):
 
 
 def lstmModel(num_labels, lstmNeurons=128, denseNeurons=64, dropout=0.1, learning_rate=1e-4, alpha=0.25, gamma=0.5):
+    """
+    Builds and compiles an LSTM-based multi-label classification model.
+    :param num_labels: Number of output labels
+    :param lstmNeurons: Number of LSTM neurons
+    :param denseNeurons: Number of dense layer neurons
+    :param dropout: Dropout rate
+    :param learning_rate: Learning rate
+    :param alpha: Focal loss alpha parameter
+    :param gamma: Focal loss gamma parameter
+    :return: Compiled Keras model
+    """
     inputs = Input(shape=(max_len,))
     x = Embedding(input_dim=max_words, output_dim=embedding_dim, input_length=max_len)(inputs)
     x = LSTM(lstmNeurons, return_sequences=False)(x)
@@ -111,7 +132,14 @@ def lstmModel(num_labels, lstmNeurons=128, denseNeurons=64, dropout=0.1, learnin
                   metrics=['accuracy'])
     return model
 
+
 def computeClassThreshold(y_true: np.ndarray, y_pred_prob: np.ndarray) -> float:
+    """
+    Computes the optimal threshold for a single class based on F1 score.
+    :param y_true: Ground truth binary labels for a class
+    :param y_pred_prob: Predicted probabilities for a class
+    :return: Optimal threshold
+    """
     best_threshold = 0.5
     best_f1 = 0.0
     for threshold in np.linspace(0.0, 1.0, 101):
@@ -124,18 +152,33 @@ def computeClassThreshold(y_true: np.ndarray, y_pred_prob: np.ndarray) -> float:
 
 
 def computeOptimalThresholds(y_val_binary: np.ndarray, y_pred_prob_val: np.ndarray) -> np.ndarray:
+    """
+    Computes optimal thresholds for each class using validation set.
+    :param y_val_binary: Ground truth binary labels for validation set
+    :param y_pred_prob_val: Predicted probabilities for validation set
+    :return: Array of optimal thresholds per class
+    """
     thresholds = []
-    #for every class(genre) we get the true labels and predicted probabilities
     for i in range(y_val_binary.shape[1]):
-        # y_val_binary[:, i] -> true labels for genre i (that specific genre) aka y_true
-        # y_pred_prob_val[:, i]  -> model's predicted probabilities for genre i
         threshold = computeClassThreshold(y_val_binary[:, i], y_pred_prob_val[:, i])
-        thresholds.append(threshold) #best threshold returned from computeClassThreshold
+        thresholds.append(threshold)
     return np.array(thresholds)
 
 
 def predict(X_train_pad, X_val_pad, X_test_pad, 
             y_train_binary, y_val_binary, y_test_binary, mlb, hyperparameters):
+    """
+    Trains the model, evaluates it on validation set, computes thresholds, and predicts on test set.
+    :param X_train_pad: Padded training data
+    :param X_val_pad: Padded validation data
+    :param X_test_pad: Padded test data
+    :param y_train_binary: Binarized training labels
+    :param y_val_binary: Binarized validation labels
+    :param y_test_binary: Binarized test labels
+    :param mlb: MultiLabelBinarizer instance
+    :param hyperparameters: Dictionary of tuned hyperparameters
+    :return: Predicted probabilities, binary predictions, and optimal thresholds
+    """
     callback = tensorflow.keras.callbacks.EarlyStopping(monitor='val_loss',
                                                         mode='min',
                                                         patience=1)
@@ -154,26 +197,38 @@ def predict(X_train_pad, X_val_pad, X_test_pad,
 
     plot_training_history(history)
 
-    # we first predict on the validation set and compute for the optimal threshold
     y_pred_prob_val = model.predict(X_val_pad)
     thresholds = computeOptimalThresholds(y_val_binary, y_pred_prob_val)
     
-    # then we predict on the test set
     y_pred_prob_test = model.predict(X_test_pad)
     
-    # for each class we adjust the threshold
     y_pred_test = np.zeros_like(y_pred_prob_test)
     for i, t in enumerate(thresholds):
         y_pred_test[:, i] = (y_pred_prob_test[:, i] >= t).astype(int)
     
     return y_pred_prob_test, y_pred_test, thresholds
 
+
 def zeroRuleBaseline(y_true: np.ndarray, class_names: list):
+    """
+    Implements a zero-rule baseline by predicting all genres for every sample.
+    :param y_true: Ground truth labels
+    :param class_names: List of genre names
+    :return: None
+    """
     y_pred = np.ones(y_true.shape)
     print("Zero Rule Baseline Predictions:")
-    print(classification_report(y_true, y_pred,target_names=class_names))
+    print(classification_report(y_true, y_pred, target_names=class_names))
+
 
 def plotPrecisionRecall(y_test_binary, y_pred_prob, genres):
+    """
+    Plots the Precision-Recall curve for each genre.
+    :param y_test_binary: Ground truth binary labels
+    :param y_pred_prob: Predicted probabilities
+    :param genres: List of genre names
+    :return: None
+    """
     plt.figure(figsize=(10, 8))
     n_classes = len(genres)
     colors = plt.cm.get_cmap('tab10', n_classes)
@@ -192,7 +247,13 @@ def plotPrecisionRecall(y_test_binary, y_pred_prob, genres):
     plt.grid()
     plt.show()
 
+
 def plot_training_history(history):
+    """
+    Plots training and validation loss curves.
+    :param history: Keras training history object
+    :return: None
+    """
     plt.figure(figsize=(10, 8))
     plt.plot(history.history['loss'], label="Training Loss", color='blue', linewidth=2)
     plt.plot(history.history['val_loss'], label="Validation Loss", color='orange', linewidth=2)
@@ -203,8 +264,13 @@ def plot_training_history(history):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
-    
+
+
 def main():
+    """
+    Main function to run the full training, evaluation, and visualization pipeline.
+    :return: None
+    """
     finished_data = loadData()
     X_train, X_val, X_test, y_train, y_val, y_test = splitData(finished_data)
     

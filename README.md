@@ -39,11 +39,18 @@ pip install -r requirements.txt
 
 ## Running API
 To run the app you can run the following command: 
-uvicorn API_SVM:app --reload
+uvicorn app:app --reload
 
 Once the app is running, you will receive a link for the application, follow that and add "/docs" to the end of it.
 
 ## Using the API
 Under the heading "\predict", you are able to provide inputs, and receive our model's genre predictions. Copy your lyrics into the Request body code box, replacing the "string" input. Make sure to submit your text in quotation marks. If there are no errors, then you should be able to see the predicted Genres in the "Response" section underneath. Else, the fitting error will appear underneath that.
+
+## Running Streamlit
+To run the app you can run the following command: 
+streamlit run your_file_path to the song_classifier.py file
+
+## Using Streamlit
+The command will lead you to the page automatically. Copy your song lyrics into the input field, and then press the button 'predict'. After that it should show the predicted song genres. 
 
 *Good luck and have fun! 🚀*
