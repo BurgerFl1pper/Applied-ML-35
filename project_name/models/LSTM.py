@@ -12,14 +12,13 @@ from tensorflow.keras.utils import pad_sequences
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Embedding, LSTM, Dense, Dropout
 from tensorflow.keras.metrics import Precision, Recall
-from Random import RandomModel
 from tensorflow.keras.optimizers import Adam
+
 from focal_loss import MyBinaryFocalCrossentropy
+from hyperparameterTuning import HyperTuning
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-from hyperparameterTuning import HyperTuning
 
 max_words = 10000
 max_len = 200
@@ -49,9 +48,6 @@ def splitData(finished_data: pd.DataFrame):
     X = finished_data['text'].tolist()
     y = finished_data['Genre'].tolist()
 
-    # X_train, X_test, y_train, y_test = train_test_split(X, y,
-    #                                                     test_size=0.2,
-    #                                                     random_state=40)
     X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, random_state=40)
     X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=0.2, random_state=40)
 
@@ -156,6 +152,8 @@ def predict(X_train_pad, X_val_pad, X_test_pad,
                         callbacks=[callback])
     print("Epochs trained: ", len(history.history["val_loss"]))
 
+    plot_training_history(history)
+
     # we first predict on the validation set and compute for the optimal threshold
     y_pred_prob_val = model.predict(X_val_pad)
     thresholds = computeOptimalThresholds(y_val_binary, y_pred_prob_val)
@@ -193,6 +191,18 @@ def plotPrecisionRecall(y_test_binary, y_pred_prob, genres):
     plt.tight_layout()
     plt.grid()
     plt.show()
+
+def plot_training_history(history):
+    plt.figure(figsize=(10, 8))
+    plt.plot(history.history['loss'], label="Training Loss", color='blue', linewidth=2)
+    plt.plot(history.history['val_loss'], label="Validation Loss", color='orange', linewidth=2)
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
     
 def main():
     finished_data = loadData()
@@ -225,9 +235,6 @@ def main():
         print(f"{genre}: {threshold:.2f}")
 
     zeroRuleBaseline(y_test_binary, mlb.classes_)
-        
-    print("Random Guesses:")
-    guesses = RandomModel(y_test_binary, mlb)
 
     print("Our Model:")
     print(classification_report(y_test_binary, y_pred, target_names=mlb.classes_))
