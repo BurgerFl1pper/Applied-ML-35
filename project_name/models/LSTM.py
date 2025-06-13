@@ -148,17 +148,12 @@ def predict(X_train_pad, X_val_pad, X_test_pad,
                       denseNeurons=hyperparameters["denseNeurons"],
                       dropout=hyperparameters["dropout"],
                       learning_rate=hyperparameters["learning_rate"])
-    model.compile(loss=MyBinaryFocalCrossentropy, optimizer='adam',  metrics=[
-        Precision(name="precision"),
-        Recall(name="recall")])
 
     history = model.fit(X_train_pad, y_train_binary,
                         epochs=20,
                         batch_size=hyperparameters["batch_size"],
                         validation_data=(X_val_pad, y_val_binary),
-                        callbacks=[callback],
-                        alpha=hyperparameters["alpha"],
-                        gamma=hyperparameters["gamma"])
+                        callbacks=[callback])
     print("Epochs trained: ", len(history.history["val_loss"]))
 
     # we first predict on the validation set and compute for the optimal threshold
