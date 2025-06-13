@@ -6,11 +6,21 @@ from itertools import combinations
 
 
 def open_File(name):
+    """
+    Opens a JSON  file and returns the data as a DataFrame.
+    :param name: name of the JSON file
+    :return: DataFrame with data
+    """
     data = pd.read_json(name, lines=True)
     return data
 
 
 def remove_columns(data):
+    """
+    Removes unnecessary columns from the DataFrame.
+    :param data: original DataFrame
+    :return: cleaned DataFrame
+    """
     data = data.drop(columns=['Artist(s)', 'song', 'Length', 'emotion',
                               'Album', 'Release Date', 'Key', 'Tempo',
                               'Loudness (db)', 'Time signature', 'Explicit',
@@ -27,11 +37,22 @@ def remove_columns(data):
 
 
 def save_data(data, name):
+    """
+    Saves a DataFrame to a JSON file.
+    :param data: DataFrame to be saved
+    :param name: name of the output JSON file
+    :return: None
+    """
     data.to_json(data.to_json(name, orient='records',
                               lines=True))
 
 
 def explode_genres(data):
+    """
+    Splits genre strings into lists of genres.
+    :param data: DataFrame with 'Genre' column
+    :return: modified DataFrame
+    """
     # Split the genre string by comma, strip whitespace, drop empty values
     data['Genre'] = data['Genre'].astype(str).str.split(',')
     data['Genre'] = data['Genre'].apply(lambda genres: [g.strip() for g in genres if g.strip()])
@@ -39,6 +60,11 @@ def explode_genres(data):
 
 
 def getGenreNames(data):
+    """
+    Prints the number and names of unique genres.
+    :param data: DataFrame with 'Genre' column
+    :return: None
+    """
     genreSet = set()
     for genres in data['Genre']:
         genreSet.update(genres)
@@ -73,8 +99,11 @@ def plot_genre_counts(data):
 
 
 def plot_heatmap(data):
-    # Group back by songs to find combinations
-    # Flatten genre lists for each song into co-occurrence pairs
+    """
+    Plots a heatmap of genre co-occurrence.
+    :param data: DataFrame with exploded 'Genre' lists
+    :return: None
+    """
     cooccurrence = Counter()
 
     for genres in data['Genre']:
@@ -103,6 +132,8 @@ def filter_only_rock_genres(data):
     """
     Keep only songs with at least one rock-related genre,
     and remove "rock" (the general tag) from their genre list.
+    :param data: DataFrame with genre information
+    :return: filtered DataFrame
     """
     def filter_rock_subgenres(genre_list):
         return [g for g in genre_list if 'rock' in g.lower() and g.lower().strip() != 'rock']
@@ -117,6 +148,11 @@ def filter_only_rock_genres(data):
 
 
 def openAndRefactor(name):
+    """
+    Opens and optinally refactors the data file. 
+    :param data: name of the input file
+    :return: loaded DataFrame
+    """
     data_name = name
     data = open_File(data_name)
 
@@ -127,6 +163,11 @@ def openAndRefactor(name):
 
 
 def processData(data):
+    """
+    Prepares the data for analysis.
+    :param data: raw DataFrame
+    :return: processed DataFrame
+    """
     data = explode_genres(data)
     getGenreNames(data)
     data = filter_only_rock_genres(data)
@@ -135,11 +176,20 @@ def processData(data):
 
 
 def plot(data):
+    """
+    Plots genre counts and co-occurrences.
+    :param data: processed DataFrame
+    :return: None
+    """
     plot_genre_counts(data)
     plot_heatmap(data)
 
 
 def main():
+    """
+    Main function to run the full pipeline.
+    :return: None
+    """
     original_data = openAndRefactor('data.json')
     data = processData(original_data)
     # save_data(data, 'finished_data.json')

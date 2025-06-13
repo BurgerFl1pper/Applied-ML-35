@@ -59,22 +59,37 @@ def encodingData(X_train, X_test, y_train, y_test):
     return X_train_vec, X_test_vec, y_train_binary, y_test_binary, vectorizer, mlb
 
 def trainClassifier(X_train_vec, y_train_binary):
+    """ 
+    Trains a OneVsRestClassifier with LinearSVC on the training data.
+    :param X_train_vec: training data
+    :param y_train_binary: training labels
+    :return: trained classifier
+    """
     clf = OneVsRestClassifier(LinearSVC())
     clf.fit(X_train_vec, y_train_binary)
     return clf
 
 def evaluate(clf, X_test_vec, y_test_binary, mlb):
     """ 
-    Trains the model and predicts the labels for the test data.
-    :param X_train_vec: training data
+    Evaluates the classifier on test data and prints a classification report.
+    :param clf: trained classifier
     :param X_test_vec: testing data
-    :param y_train_binary: training labels
-    :return: predicted labels
+    :param y_test_binary: testing labels
+    :param mlb: MultiLabelBinarizer instance (for target class names)
+    :return: None
     """
     y_pred = clf.predict(X_test_vec)
     print(classification_report(y_test_binary, y_pred, target_names=mlb.classes_))
 
 def saveAll(vectorizer, mlb, clf, model_dir='API'):
+    """ 
+    Saves the vectorizer, label binarizer, and classifier to disk.
+    :param vectorizer: trained vectorizer
+    :param mlb: trained MultiLabelBinarizer
+    :param clf: trained classifier
+    :param model_dir: directory path to save the models
+    :return: None
+    """
     os.makedirs(model_dir, exist_ok=True)
     joblib.dump(vectorizer, os.path.join(model_dir, 'vectorizer.joblib'))
     joblib.dump(mlb, os.path.join(model_dir, 'mlb.joblib'))
